@@ -14,9 +14,9 @@ template <typename V>
 
 class HashTable: public Dict<V>{
 	private:
-		int n=0;
-		int max=10;
-		ListLinked<TableEntry<V>>* table;
+		int n;
+		int max = 3;
+		ListLinked<TableEntry<V>>** table;
 		int h(string key){
 			int asci= 0;
 			for(int i = 0; i < key.length(); i++){
@@ -25,42 +25,63 @@ class HashTable: public Dict<V>{
 			return asci%max;
 		}
 	public:
-		HashTable(int size){
+		HashTable(int size) {
 			n = 0;
 			max = size;
-			table = new ListLinked<TableEntry<V>>;
+			table = new ListLinked<TableEntry<V>>*[max];  // Reserva arreglo dinámico de punteros
+			for (int i = 0; i < max; i++) {
+				table[i] = nullptr;  // Inicializa cada entrada a nullptr
+			}
 		}
-		~HashTable(){
-			delete table;
+
+		~HashTable() {
+			for (int i = 0; i < max; i++) {
+				delete table[i];  // Libera cada lista enlazada
+			}
+			delete[] table;  // Libera el arreglo de punteros
 		}
-	
 		int capacity(){
 			return max;
 		}
 
 		V search(string key) override {
-			Node<TableEntry<V>>* aux = table->first;
+			int index = h(key);
+			Node<TableEntry<V>>* aux = nullptr; // Inicializa aux a nullptr
 
-			while (aux != nullptr) {
-				if (aux->data.key == key) {
+			if (table[index] != nullptr) { // Verifica si la lista en ese índice existe
+				aux = table[index]->first;
+			}
+
+			while (aux != nullptr) { // Recorre la lista completa
+				if (aux->data.key == key) { // Clave encontrada
 					return aux->data.value;
 				}
 				aux = aux->next;
-			}// Elemento no encontrado
+			}
 
+			// Clave no encontrada
 			return -1;
 		}
+
+
 		void insert(string key, V value) override {
+			int indice = h(key);
 			V status = search(key);
 			if (status != -1){
 				throw runtime_error("Elemento ya existente");
 			}
 			Node<TableEntry<V>>* nuevoNodo = new Node<TableEntry<V>>(TableEntry(key, value), nullptr);
+			
+			if(table[indice] == nullptr){
+				table[indice] = new ListLinked<TableEntry<V>>();
+			}
+			Node<TableEntry<V>>* aux = table[indice]->first;
 
-			if (table->first == nullptr) {
-				table->first = nuevoNodo;
+
+
+			if (aux == nullptr) {
+				table[indice]->first = nuevoNodo;
 			} else {
-				Node<TableEntry<V>>* aux = table->first;
 				while (aux->next != nullptr) {
 					aux = aux->next;
 				}
@@ -71,36 +92,59 @@ class HashTable: public Dict<V>{
 		}
 
 		V remove(string key) override{
+			int indice = h(key);
 			if(search(key) == -1){
 				throw runtime_error("No existe esta entrada");
 			}
 			else{
-				Node<TableEntry<V>>* aux = table->first;
+
+				Node<TableEntry<V>>* aux = nullptr;
 				Node<TableEntry<V>>* prev = nullptr;
-				while(aux->data.key != key){
-					prev = aux;
-					aux = aux->next;
+
+				if(table[indice] != nullptr){
+					aux = table[indice]->first;
+
 				}
-				prev->next = aux->next;
-				n -= 1;
-				return 1;
+				if (aux->data.key == key) { // Comparamos la clave del nodo
+					if (prev == nullptr) { 
+						// Caso especial: el nodo a eliminar es el primero
+						table[indice]->first = aux->next;
+					} else { 
+						// Nodo intermedio o final
+						prev->next = aux->next;
+					}
+
+					// Almacenar el valor antes de eliminar el nodo
+					V removedValue = aux->data.value;
+					delete aux; // Liberar memoria del nodo eliminado
+
+					n--; // Decrementar el número de elementos
+					return removedValue; // Retornar el valor eliminado
+				}
 			}
 			return -1;
 		}
+		int entries() override{
+			return n;
+		}
 		friend std::ostream& operator<<(std::ostream &out, const HashTable<V> &th){
-			Node<TableEntry<V>>* aux = th.table->first;
-			for (int i = 0; i < th.n; i++){
-				out << aux->data.key << "\t" << aux->data.value << endl;
-				aux = aux->next;
+			Node<TableEntry<V>>* aux = nullptr;
+			for (int i = 0; i < th.max; i++){
+				if(th.table[i] != nullptr){
+					aux = th.table[i]->first;
+				}
+				while(aux != nullptr){
+					out << aux->data.key << ": " << aux->data.value << endl;
+					aux = aux->next;
+				}
 			}
 			return out;
 		}
 		V operator[](std::string key){
 			return search(key);
 		}
-		int entries() override{
-			return n;
-		}
+		
 
 };
+
 

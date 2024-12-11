@@ -15,12 +15,14 @@ class ListLinked : public List<T> {
 			n = 10;
 		}
 		~ListLinked(){
-			Node<T>* aux;
-			while(aux != nullptr){
-				aux->next = first->next;
-				delete first;
-				first = aux;
+			Node<T>* actual = first;
+			
+			while(actual != nullptr){
+				Node<T>* siguiente = actual->next;
+				delete actual;
+				actual = siguiente;
 			}
+			first = nullptr;
 			
 		}
 		T operator[](int pos){
